@@ -8,6 +8,12 @@ export interface Item {
   bonus: number;
 }
 
+export interface MemoryPair {
+  id: string;
+  emoji: string;
+  name: string;
+}
+
 export interface Question {
   id: string;
   type: 'multiple-choice' | 'memory' | 'timing';
@@ -15,6 +21,7 @@ export interface Question {
   options?: string[]; // for multiple-choice
   correctAnswer: number; // index of correct option
   facts: string[]; // facts learned after answering
+  memoryPairs?: MemoryPair[]; // for memory game (6 pairs = 12 cards)
 }
 
 export interface Quest {
@@ -118,6 +125,21 @@ export const LOCATIONS: Location[] = [
             options: ['En vargpäls', 'En krigare som fick vargens kraft', 'Ett vapen', 'Ett skepp'],
             correctAnswer: 1,
             facts: ['Ulfheðnar var krigare som trance-kämpade som vargar i strid.']
+          },
+          {
+            id: 'v2-q3',
+            type: 'memory',
+            question: 'Para ihop!',
+            correctAnswer: 0,
+            facts: ['Vikingarna använde många verktyg i smedjan: tång, hammare och städ.'],
+            memoryPairs: [
+              { id: 'tongs', emoji: '🔧', name: 'Tång' },
+              { id: 'hammer', emoji: '🔨', name: 'Hammare' },
+              { id: 'anvil', emoji: '🪨', name: 'Städ' },
+              { id: 'fire', emoji: '🔥', name: 'Eld' },
+              { id: 'ore', emoji: '🪨', name: 'Malma' },
+              { id: 'forge', emoji: '🏚️', name: 'Smedja' }
+            ]
           }
         ]
       }
@@ -190,13 +212,22 @@ export const ITEMS: Item[] = [
 export const STORAGE_KEY = 'viking-quest-save';
 
 export function saveGame(player: Player): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(player));
+  } catch (e) {
+    console.error('Failed to save game:', e);
+  }
 }
 
 export function loadGame(): Player | null {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    return JSON.parse(saved);
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return JSON.parse(saved) as Player;
+    }
+  } catch (e) {
+    console.error('Failed to load game:', e);
+    localStorage.removeItem(STORAGE_KEY);
   }
   return null;
 }
@@ -217,14 +248,30 @@ export function createNewPlayer(name: string, avatar: string): Player {
   };
 }
 
-export function calculateLevel(xp: number): number {
+export function calculateLevel(totalXp: number): number {
   // Each level requires 100 * level XP
   let level = 1;
   let xpNeeded = 100;
-  while (xp >= xpNeeded) {
-    xp -= xpNeeded;
+  let remainingXp = totalXp;
+  
+  while (remainingXp >= xpNeeded) {
+    remainingXp -= xpNeeded;
     level++;
     xpNeeded = level * 100;
   }
   return level;
+}
+
+export function xpToNextLevel(totalXp: number): number {
+  // Returns XP needed to reach next level
+  let level = 1;
+  let xpNeeded = 100;
+  let remainingXp = totalXp;
+  
+  while (remainingXp >= xpNeeded) {
+    remainingXp -= xpNeeded;
+    level++;
+    xpNeeded = level * 100;
+  }
+  return xpNeeded - remainingXp;
 }

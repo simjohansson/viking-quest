@@ -413,6 +413,69 @@ body {
   transform: scale(0.95);
 }
 
+/* Memory Game */
+.memory-game {
+  padding: 20px;
+}
+
+.memory-info {
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+  color: #f39c12;
+}
+
+.memory-moves {
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.memory-card {
+  aspect-ratio: 1;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #34495e, #2c3e50);
+  border: 2px solid #4a6278;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70px;
+}
+
+.memory-card:hover:not(:disabled) {
+  transform: scale(1.05);
+  border-color: #f39c12;
+}
+
+.memory-card.flipped {
+  background: linear-gradient(135deg, #2c3e50, #1a252f);
+  border-color: #3498db;
+}
+
+.memory-card.matched {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  border-color: #2ecc71;
+  opacity: 0.7;
+}
+
+.memory-card:disabled {
+  cursor: default;
+}
+
+.card-content {
+  pointer-events: none;
+}
+
 .item-popup {
   position: fixed;
   top: 50%;

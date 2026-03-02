@@ -1,10 +1,21 @@
-import { useState, useEffect } from 'react';
-import { createNewPlayer, loadGame, saveGame, LOCATIONS, VIKING_AVATARS, calculateLevel } from './data/gameData';
-import type { Player, Location, Quest, Question } from './data/gameData';
+import { useState, useEffect, useCallback } from 'react';
+import { createNewPlayer, loadGame, saveGame, LOCATIONS, VIKING_AVATARS, calculateLevel, xpToNextLevel } from './data/gameData';
+import type { Player, Location, Quest, Question, MemoryPair } from './data/gameData';
 import './App.css';
 
+const XP_PER_QUESTION = 20;
+
+interface MemoryCard {
+  id: string;
+  pairId: string;
+  emoji: string;
+  name: string;
+  isFlipped: boolean;
+  isMatched: boolean;
+}
+
 function App() {
-  const [gameState, setGameState] = useState<'menu' | 'create' | 'playing'>('menu');
+  const [gameState, setGameState] = useState<'menu' | 'create' | 'playing' | 'loading'>('loading');
   const [player, setPlayer] = useState<Player | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
@@ -13,16 +24,41 @@ function App() {
   const [showFact, setShowFact] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [newItem, setNewItem] = useState<string | null>(null);
+  
+  // Memory game state
+  const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
+  const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
+  const [memoryMatches, setMemoryMatches] = useState<string[]>([]);
+  const [memoryMoves, setMemoryMoves] = useState(0);
 
   // Character creation state
   const [charName, setCharName] = useState('');
   const [charAvatar, setCharAvatar] = useState('🪓');
+
+  // Handle keyboard escape
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      if (currentQuestion) {
+        setCurrentQuestion(null);
+        setSelectedQuest(null);
+        setFeedback(null);
+        setShowFact(null);
+      }
+    }
+  }, [currentQuestion]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   useEffect(() => {
     const saved = loadGame();
     if (saved) {
       setPlayer(saved);
       setGameState('playing');
+    } else {
+      setGameState('menu');
     }
   }, []);
 
@@ -50,6 +86,93 @@ function App() {
     setCurrentQuestion(quest.questions[0]);
     setShowFact(null);
     setFeedback(null);
+    
+    // Initialize memory game if first question is memory
+    if (quest.questions[0].type === 'memory' && quest.questions[0].memoryPairs) {
+      initMemoryGame(quest.questions[0].memoryPairs);
+    }
+  };
+
+  const initMemoryGame = (pairs: MemoryPair[]) => {
+    const cards: MemoryCard[] = [];
+    
+    // Create two cards for each pair (emoji and name)
+    pairs.forEach(pair => {
+      cards.push({
+        id: `${pair.id}-emoji`,
+        pairId: pair.id,
+        emoji: pair.emoji,
+        name: pair.name,
+        isFlipped: false,
+        isMatched: false
+      });
+      cards.push({
+        id: `${pair.id}-name`,
+        pairId: pair.id,
+        emoji: pair.name,
+        name: pair.name,
+        isFlipped: false,
+        isMatched: false
+      });
+    });
+    
+    // Shuffle cards
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    
+    setMemoryCards(cards);
+    setMemoryFlipped([]);
+    setMemoryMatches([]);
+    setMemoryMoves(0);
+  };
+
+  const handleMemoryCardClick = (cardIndex: number) => {
+    if (feedback !== null) return; // Already answering
+    if (memoryCards[cardIndex].isMatched) return;
+    if (memoryFlipped.includes(cardIndex)) return;
+    if (memoryFlipped.length >= 2) return;
+    
+    // Flip the card
+    const newCards = [...memoryCards];
+    newCards[cardIndex].isFlipped = true;
+    setMemoryCards(newCards);
+    
+    const newFlipped = [...memoryFlipped, cardIndex];
+    setMemoryFlipped(newFlipped);
+    
+    if (newFlipped.length === 2) {
+      setMemoryMoves(memoryMoves + 1);
+      
+      const [first, second] = newFlipped;
+      const firstCard = memoryCards[first];
+      const secondCard = memoryCards[second];
+      
+      if (firstCard.pairId === secondCard.pairId) {
+        // Match found!
+        newCards[first].isMatched = true;
+        newCards[second].isMatched = true;
+        setMemoryCards(newCards);
+        setMemoryMatches([...memoryMatches, firstCard.pairId]);
+        setMemoryFlipped([]);
+        
+        // Check if all pairs matched
+        if (memoryMatches.length + 1 === currentQuestion?.memoryPairs?.length) {
+          // Memory game complete!
+          answerQuestion(0);
+        }
+      } else {
+        // No match - flip back after delay
+        setTimeout(() => {
+          const resetCards = [...memoryCards];
+          resetCards[first].isFlipped = false;
+          resetCards[second].isFlipped = false;
+          setMemoryCards(resetCards);
+          setMemoryFlipped([]);
+        }, 1000);
+      }
+    }
   };
 
   const answerQuestion = (answer: number) => {
@@ -59,12 +182,13 @@ function App() {
     setFeedback(isCorrect ? 'correct' : 'wrong');
 
     if (isCorrect) {
-      const newXp = player.xp + 20; // XP per correct answer
-      const newLevel = calculateLevel(newXp);
+      // Add XP for correct answer
+      const totalXp = player.xp + XP_PER_QUESTION;
+      const newLevel = calculateLevel(totalXp);
       
-      const updatedPlayer = {
+      const updatedPlayer: Player = {
         ...player,
-        xp: newXp,
+        xp: totalXp,
         level: newLevel
       };
       setPlayer(updatedPlayer);
@@ -82,11 +206,17 @@ function App() {
         
         if (questionIndex < selectedQuest.questions.length - 1) {
           setQuestionIndex(questionIndex + 1);
-          setCurrentQuestion(selectedQuest.questions[questionIndex + 1]);
+          const nextQuestion = selectedQuest.questions[questionIndex + 1];
+          setCurrentQuestion(nextQuestion);
+          
+          // Initialize memory game if next question is memory
+          if (nextQuestion.type === 'memory' && nextQuestion.memoryPairs) {
+            initMemoryGame(nextQuestion.memoryPairs);
+          }
         } else {
-          // Quest complete!
-          const finalXp = selectedQuest.xpReward;
-          const finalLevel = calculateLevel(player.xp + finalXp);
+          // Quest complete! Add quest XP reward
+          const finalXp = totalXp + selectedQuest.xpReward;
+          const finalLevel = calculateLevel(finalXp);
           
           let newInventory = [...player.inventory];
           let itemMsg: string | null = null;
@@ -96,9 +226,9 @@ function App() {
             itemMsg = selectedQuest.itemReward.name;
           }
 
-          const completedPlayer = {
-            ...player,
-            xp: player.xp + finalXp,
+          const completedPlayer: Player = {
+            ...updatedPlayer,
+            xp: finalXp,
             level: finalLevel,
             inventory: newInventory,
             completedQuests: [...player.completedQuests, selectedQuest.id]
@@ -124,6 +254,16 @@ function App() {
   };
 
   // Menu screen
+  if (gameState === 'loading') {
+    return (
+      <div className="game-container">
+        <div className="menu">
+          <p>Laddar...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (gameState === 'menu') {
     return (
       <div className="game-container">
@@ -187,7 +327,15 @@ function App() {
       <div className="game-container">
         <div className="quest-screen">
           <div className="quest-header">
-            <button className="back-btn" onClick={() => { setCurrentQuestion(null); setSelectedQuest(null); }}>
+            <button className="back-btn" onClick={() => { 
+              setCurrentQuestion(null); 
+              setSelectedQuest(null); 
+              setFeedback(null); 
+              setShowFact(null);
+              setMemoryCards([]);
+              setMemoryFlipped([]);
+              setMemoryMatches([]);
+            }}>
               ← Tillbaka
             </button>
             <h2>{selectedQuest.name}</h2>
@@ -221,6 +369,27 @@ function App() {
                 >
                   👆 TRÄFFA!
                 </button>
+              </div>
+            )}
+
+            {currentQuestion.type === 'memory' && currentQuestion.memoryPairs && (
+              <div className="memory-game">
+                <p className="memory-info">Para ihop symbolen med namnet! 🧠</p>
+                <p className="memory-moves">Drag: {memoryMoves}</p>
+                <div className="memory-grid">
+                  {memoryCards.map((card, index) => (
+                    <button
+                      key={card.id}
+                      className={`memory-card ${card.isFlipped || card.isMatched ? 'flipped' : ''} ${card.isMatched ? 'matched' : ''}`}
+                      onClick={() => handleMemoryCardClick(index)}
+                      disabled={card.isMatched}
+                    >
+                      <span className="card-content">
+                        {card.isFlipped || card.isMatched ? card.emoji : '❓'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -259,6 +428,7 @@ function App() {
         <div className="stats">
           <span className="level">⭐ Nivå {player?.level}</span>
           <span className="xp">💎 {player?.xp} XP</span>
+          <span className="xp-next">→ {player ? xpToNextLevel(player.xp) : 0} till nästa</span>
         </div>
       </div>
 
