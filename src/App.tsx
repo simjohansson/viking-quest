@@ -74,6 +74,13 @@ function App() {
   useEffect(() => {
     const saved = loadGame();
     if (saved) {
+      // Migrate old saved games that don't have equipment
+      if (!saved.equipment) {
+        saved.equipment = {
+          weapon: null,
+          armor: null
+        };
+      }
       setPlayer(saved);
       setGameState('playing');
     } else {
@@ -142,8 +149,9 @@ function App() {
 
   const getEquipmentBonus = (): number => {
     if (!player) return 0;
-    const weaponBonus = player.equipment.weapon?.bonus ?? 0;
-    const armorBonus = player.equipment.armor?.bonus ?? 0;
+    const equipment = player.equipment || { weapon: null, armor: null };
+    const weaponBonus = equipment.weapon?.bonus ?? 0;
+    const armorBonus = equipment.armor?.bonus ?? 0;
     return weaponBonus + armorBonus;
   };
 
@@ -878,19 +886,19 @@ function App() {
           <div className="equip-slot weapon">
             <span className="slot-label">Vapen</span>
             <span className="slot-item">
-              {player?.equipment.weapon ? player.equipment.weapon.emoji : '❌'}
+              {player?.equipment?.weapon ? player.equipment.weapon.emoji : '❌'}
             </span>
             <span className="slot-bonus">
-              +{player?.equipment.weapon?.bonus ?? 0} XP
+              +{player?.equipment?.weapon?.bonus ?? 0} XP
             </span>
           </div>
           <div className="equip-slot armor">
             <span className="slot-label">Rustning</span>
             <span className="slot-item">
-              {player?.equipment.armor ? player.equipment.armor.emoji : '❌'}
+              {player?.equipment?.armor ? player.equipment.armor.emoji : '❌'}
             </span>
             <span className="slot-bonus">
-              +{player?.equipment.armor?.bonus ?? 0} XP
+              +{player?.equipment?.armor?.bonus ?? 0} XP
             </span>
           </div>
         </div>
