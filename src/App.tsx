@@ -586,13 +586,18 @@ function App() {
 
             {currentQuestion.type === 'timing' && (
               <div className="timing-game">
-                <button 
-                  className="timing-btn"
-                  onClick={() => answerQuestion(0)}
-                  disabled={feedback !== null}
-                >
-                  👆 TRÄFFA!
-                </button>
+                <p className="timing-info">👆 Klicka på skölden när den är i mitten!</p>
+                <div className="timing-arena">
+                  <div className="timing-target">
+                    <button 
+                      className="timing-btn"
+                      onClick={() => answerQuestion(0)}
+                      disabled={feedback !== null}
+                    >
+                      🛡️
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
