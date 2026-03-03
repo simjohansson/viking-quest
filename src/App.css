@@ -814,3 +814,313 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Mini-games section */
+.mini-games {
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.mini-games h3 {
+  color: #f39c12;
+  margin-bottom: 12px;
+}
+
+.minigame-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.minigame-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.minigame-btn:hover {
+  transform: scale(1.02);
+}
+
+.minigame-btn.farm {
+  border-color: #27ae60;
+}
+
+.minigame-btn.farm:hover {
+  background: rgba(46, 204, 113, 0.2);
+}
+
+.minigame-btn.boat {
+  border-color: #3498db;
+}
+
+.minigame-btn.boat:hover {
+  background: rgba(52, 152, 219, 0.2);
+}
+
+.minigame-btn span {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-top: 5px;
+}
+
+/* Farm Game */
+.farm-game {
+  padding: 15px;
+}
+
+.farm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.farm-header h2 {
+  color: #27ae60;
+}
+
+.farm-coins {
+  font-size: 1.2rem;
+  color: #f1c40f;
+  font-weight: bold;
+}
+
+.seed-shop {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.seed-shop h4 {
+  color: #ccc;
+  margin-bottom: 10px;
+}
+
+.seed-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.seed-btn {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seed-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.seed-btn.selected {
+  border-color: #27ae60;
+  background: rgba(46, 204, 113, 0.2);
+}
+
+.farm-plots {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.farm-plot {
+  aspect-ratio: 1;
+  background: rgba(139, 69, 19, 0.3);
+  border: 2px dashed #8b4513;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 8px;
+}
+
+.farm-plot:hover {
+  background: rgba(139, 69, 19, 0.5);
+}
+
+.farm-plot.planted {
+  border-style: solid;
+  background: rgba(34, 139, 34, 0.3);
+}
+
+.farm-plot.watered {
+  background: rgba(52, 152, 219, 0.3);
+}
+
+.plant-emoji {
+  font-size: 2rem;
+}
+
+.growth-bar {
+  width: 80%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  margin: 5px 0;
+  overflow: hidden;
+}
+
+.growth-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  transition: width 0.3s;
+}
+
+.plot-status {
+  font-size: 0.65rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.empty-plot {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.grow-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.grow-btn:hover {
+  transform: scale(1.02);
+}
+
+/* Boat Game */
+.boat-game {
+  padding: 15px;
+}
+
+.boat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.boat-header h2 {
+  color: #3498db;
+}
+
+.boat-distance {
+  font-size: 1rem;
+  color: #aaa;
+}
+
+.boat-arena {
+  position: relative;
+  width: 100%;
+  height: 300px;
+  background: linear-gradient(180deg, #1e3a5f 0%, #2980b9 100%);
+  border-radius: 15px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.boat-target {
+  position: absolute;
+  font-size: 2.5rem;
+  transform: translate(-50%, -50%);
+}
+
+.boat-obstacle {
+  position: absolute;
+  font-size: 2rem;
+  transform: translate(-50%, -50%);
+}
+
+.boat-player {
+  position: absolute;
+  font-size: 2.5rem;
+  transform: translate(-50%, -50%);
+  transition: all 0.1s;
+}
+
+.boat-controls {
+  text-align: center;
+}
+
+.boat-controls p {
+  color: #aaa;
+  margin-bottom: 15px;
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.control-buttons button {
+  font-size: 1.5rem;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid #3498db;
+  border-radius: 10px;
+  color: #fff;
+  cursor: pointer;
+}
+
+.control-buttons button:active {
+  background: rgba(52, 152, 219, 0.3);
+}
+
+.h-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.boat-gameover, .boat-win {
+  text-align: center;
+  padding: 40px;
+}
+
+.boat-gameover h3 {
+  color: #e74c3c;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.boat-win h3 {
+  color: #2ecc71;
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.boat-gameover button {
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-size: 1rem;
+  background: #3498db;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}

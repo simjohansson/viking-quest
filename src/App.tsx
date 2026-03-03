@@ -15,7 +15,7 @@ interface MemoryCard {
 }
 
 function App() {
-  const [gameState, setGameState] = useState<'menu' | 'create' | 'playing' | 'loading'>('loading');
+  const [gameState, setGameState] = useState<'menu' | 'create' | 'playing' | 'loading' | 'farm' | 'boat'>('loading');
   const [player, setPlayer] = useState<Player | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
@@ -35,6 +35,20 @@ function App() {
   // Inventory & Equipment state
   const [showInventory, setShowInventory] = useState(false);
   const [activeItemBonus, setActiveItemBonus] = useState(0);
+
+  // Farm game state
+  const [farmPlots, setFarmPlots] = useState<{plant: string | null, growth: number, watered: boolean}[]>(
+    Array(6).fill(null).map(() => ({ plant: null, growth: 0, watered: false }))
+  );
+  const [farmCoins, setFarmCoins] = useState(0);
+  const [selectedSeed, setSelectedSeed] = useState<string | null>(null);
+
+  // Boat game state
+  const [boatPosition, setBoatPosition] = useState({ x: 50, y: 50 });
+  const [boatObstacles, setBoatObstacles] = useState<{x: number, y: number, type: string}[]>([]);
+  const [boatGameOver, setBoatGameOver] = useState(false);
+  const [boatDistance, setBoatDistance] = useState(0);
+  const [boatTarget, setBoatTarget] = useState<{x: number, y: number, name: string} | null>(null);
 
   // Character creation state
   const [charName, setCharName] = useState('');
@@ -132,6 +146,128 @@ function App() {
     const armorBonus = player.equipment.armor?.bonus ?? 0;
     return weaponBonus + armorBonus;
   };
+
+  // Farm game functions
+  const plantSeed = (plotIndex: number, seedType: string) => {
+    if (!selectedSeed || farmPlots[plotIndex].plant) return;
+    const newPlots = [...farmPlots];
+    newPlots[plotIndex] = { plant: seedType, growth: 0, watered: false };
+    setFarmPlots(newPlots);
+    setSelectedSeed(null);
+  };
+
+  const waterPlant = (plotIndex: number) => {
+    if (!farmPlots[plotIndex].plant) return;
+    const newPlots = [...farmPlots];
+    newPlots[plotIndex].watered = true;
+    setFarmPlots(newPlots);
+  };
+
+  const growPlants = () => {
+    const newPlots = farmPlots.map(plot => {
+      if (plot.plant && plot.watered && plot.growth < 100) {
+        return { ...plot, growth: Math.min(100, plot.growth + 25) };
+      }
+      return plot;
+    });
+    setFarmPlots(newPlots);
+  };
+
+  const harvestPlant = (plotIndex: number) => {
+    const plot = farmPlots[plotIndex];
+    if (!plot.plant || plot.growth < 100) return;
+
+    // Calculate reward based on plant type
+    const rewards: Record<string, number> = {
+      'wheat': 30,
+      'carrot': 25,
+      'cabbage': 20,
+      'corn': 40
+    };
+    const reward = rewards[plot.plant] || 20;
+    setFarmCoins(farmCoins + reward);
+
+    // Clear plot
+    const newPlots = [...farmPlots];
+    newPlots[plotIndex] = { plant: null, growth: 0, watered: false };
+    setFarmPlots(newPlots);
+  };
+
+  // Boat game functions
+  const startBoatGame = (destinationName: string) => {
+    setBoatPosition({ x: 10, y: 50 });
+    setBoatDistance(0);
+    setBoatGameOver(false);
+    setBoatTarget({ x: 90, y: 30 + Math.random() * 40, name: destinationName });
+    
+    // Generate obstacles
+    const obstacles: {x: number, y: number, type: string}[] = [];
+    for (let i = 0; i < 8; i++) {
+      obstacles.push({
+        x: 30 + Math.random() * 50,
+        y: Math.random() * 80 + 10,
+        type: Math.random() > 0.5 ? 'rock' : 'log'
+      });
+    }
+    setBoatObstacles(obstacles);
+  };
+
+  const moveBoat = (direction: 'up' | 'down' | 'left' | 'right') => {
+    if (boatGameOver) return;
+    
+    const newPos = { ...boatPosition };
+    switch(direction) {
+      case 'up': newPos.y = Math.max(5, newPos.y - 8); break;
+      case 'down': newPos.y = Math.min(95, newPos.y + 8); break;
+      case 'left': newPos.x = Math.max(5, newPos.x - 5); break;
+      case 'right': newPos.x = Math.min(95, newPos.x + 5); break;
+    }
+    setBoatPosition(newPos);
+    setBoatDistance(boatDistance + 1);
+
+    // Check collision with obstacles
+    for (const obs of boatObstacles) {
+      const distance = Math.sqrt(Math.pow(newPos.x - obs.x, 2) + Math.pow(newPos.y - obs.y, 2));
+      if (distance < 8) {
+        setBoatGameOver(true);
+        return;
+      }
+    }
+
+    // Check if reached target
+    if (boatTarget && newPos.x >= boatTarget.x - 5 && Math.abs(newPos.y - boatTarget.y) < 15) {
+      // Win! Give XP
+      const reward = 75;
+      if (player) {
+        const newXp = player.xp + reward;
+        const newLevel = calculateLevel(newXp);
+        const updatedPlayer = { ...player, xp: newXp, level: newLevel };
+        setPlayer(updatedPlayer);
+        saveGame(updatedPlayer);
+      }
+      setTimeout(() => {
+        setGameState('playing');
+      }, 1500);
+    }
+
+    // Move obstacles left to make it harder
+    if (boatDistance % 3 === 0) {
+      setBoatObstacles(boatObstacles.map((o: {x: number, y: number, type: string}) => ({ ...o, x: o.x - 2 })).filter((o: {x: number}) => o.x > 0));
+    }
+  };
+
+  // Keyboard controls for boat
+  useEffect(() => {
+    const handleBoatKeyDown = (e: KeyboardEvent) => {
+      if (gameState !== 'boat') return;
+      if (e.key === 'ArrowUp' || e.key === 'w') moveBoat('up');
+      if (e.key === 'ArrowDown' || e.key === 's') moveBoat('down');
+      if (e.key === 'ArrowLeft' || e.key === 'a') moveBoat('left');
+      if (e.key === 'ArrowRight' || e.key === 'd') moveBoat('right');
+    };
+    window.addEventListener('keydown', handleBoatKeyDown);
+    return () => window.removeEventListener('keydown', handleBoatKeyDown);
+  }, [gameState, boatPosition, boatGameOver]);
 
   const selectLocation = (location: Location) => {
     setSelectedLocation(location);
@@ -502,6 +638,157 @@ function App() {
     );
   }
 
+  // Farm mini-game
+  if (gameState === 'farm') {
+    const seeds = [
+      { id: 'wheat', name: 'Vete', emoji: '🌾', cost: 10 },
+      { id: 'carrot', name: 'Morot', emoji: '🥕', cost: 8 },
+      { id: 'cabbage', name: 'Kål', emoji: '🥬', cost: 6 },
+      { id: 'corn', name: 'Majs', emoji: '🌽', cost: 15 },
+    ];
+
+    return (
+      <div className="game-container">
+        <div className="farm-game">
+          <div className="farm-header">
+            <button className="back-btn" onClick={() => setGameState('playing')}>← Tillbaka</button>
+            <h2>🌱 Bondgård</h2>
+            <div className="farm-coins">🪙 {farmCoins} mynt</div>
+          </div>
+
+          <div className="seed-shop">
+            <h4>Fröbutik (klicka för att välja)</h4>
+            <div className="seed-options">
+              {seeds.map(seed => (
+                <button
+                  key={seed.id}
+                  className={`seed-btn ${selectedSeed === seed.id ? 'selected' : ''}`}
+                  onClick={() => setSelectedSeed(seed.id)}
+                >
+                  {seed.emoji} {seed.name} ({seed.cost}🪙)
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="farm-plots">
+            {[0, 1, 2, 3, 4, 5].map(index => (
+              <div
+                key={index}
+                className={`farm-plot ${farmPlots[index].plant ? 'planted' : ''} ${farmPlots[index].watered ? 'watered' : ''}`}
+                onClick={() => {
+                  if (!farmPlots[index].plant && selectedSeed) {
+                    plantSeed(index, selectedSeed);
+                  } else if (farmPlots[index].plant && !farmPlots[index].watered) {
+                    waterPlant(index);
+                  } else if (farmPlots[index].growth >= 100) {
+                    harvestPlant(index);
+                  }
+                }}
+              >
+                {farmPlots[index].plant ? (
+                  <>
+                    <span className="plant-emoji">
+                      {farmPlots[index].plant === 'wheat' && '🌾'}
+                      {farmPlots[index].plant === 'carrot' && '🥕'}
+                      {farmPlots[index].plant === 'cabbage' && '🥬'}
+                      {farmPlots[index].plant === 'corn' && '🌽'}
+                    </span>
+                    <div className="growth-bar">
+                      <div className="growth-fill" style={{width: `${farmPlots[index].growth}%`}}></div>
+                    </div>
+                    <span className="plot-status">
+                      {!farmPlots[index].watered ? '💧 Klicka för att vattna!' : 
+                       farmPlots[index].growth >= 100 ? '✨ Klicka för att skörda!' : 
+                       '🌱 Växer...'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="empty-plot">🕳️ Klicka för att plantera</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button className="grow-btn" onClick={growPlants}>
+            🌱 Vattna alla & växa (+25% per klick)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Boat mini-game
+  if (gameState === 'boat') {
+    return (
+      <div className="game-container">
+        <div className="boat-game">
+          <div className="boat-header">
+            <button className="back-btn" onClick={() => setGameState('playing')}>← Tillbaka</button>
+            <h2>🚤 Sjöfärd till {boatTarget?.name || 'Birka'}</h2>
+            <div className="boat-distance">📍 {boatDistance}m</div>
+          </div>
+
+          {boatGameOver ? (
+            <div className="boat-gameover">
+              <h3>💥 Du kraschade!</h3>
+              <p>Seglade {boatDistance} meter</p>
+              <button onClick={() => startBoatGame('Birka')}>🔄 Försök igen</button>
+            </div>
+          ) : boatTarget && boatPosition.x >= boatTarget.x - 5 && Math.abs(boatPosition.y - boatTarget.y) < 15 ? (
+            <div className="boat-win">
+              <h3>🎉 Du nådde {boatTarget.name}!</h3>
+              <p>+75 XP!</p>
+            </div>
+          ) : (
+            <>
+              <div className="boat-arena">
+                {/* Target */}
+                <div 
+                  className="boat-target"
+                  style={{ left: `${boatTarget?.x || 90}%`, top: `${boatTarget?.y || 50}%` }}
+                >
+                  🏝️
+                </div>
+
+                {/* Obstacles */}
+                {boatObstacles.map((obs, i) => (
+                  <div
+                    key={i}
+                    className="boat-obstacle"
+                    style={{ left: `${obs.x}%`, top: `${obs.y}%` }}
+                  >
+                    {obs.type === 'rock' ? '🪨' : '🪵'}
+                  </div>
+                ))}
+
+                {/* Player boat */}
+                <div 
+                  className="boat-player"
+                  style={{ left: `${boatPosition.x}%`, top: `${boatPosition.y}%` }}
+                >
+                  🛶
+                </div>
+              </div>
+
+              <div className="boat-controls">
+                <p>🎮 Anpilj pilarna eller WASD för att styra!</p>
+                <div className="control-buttons">
+                  <button onClick={() => moveBoat('up')}>⬆️</button>
+                  <div className="h-controls">
+                    <button onClick={() => moveBoat('left')}>⬅️</button>
+                    <button onClick={() => moveBoat('down')}>⬇️</button>
+                    <button onClick={() => moveBoat('right')}>➡️</button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   // Main playing screen
   return (
     <div className="game-container">
@@ -570,6 +857,20 @@ function App() {
           </div>
         </div>
       )}
+
+      <div className="mini-games">
+        <h3>🎮 Minispel</h3>
+        <div className="minigame-buttons">
+          <button className="minigame-btn farm" onClick={() => setGameState('farm')}>
+            🌱 <b>Bondgård</b>
+            <span>Plantera, vattna & skörda!</span>
+          </button>
+          <button className="minigame-btn boat" onClick={() => startBoatGame('Birka')}>
+            🚤 <b>Sjöfärd</b>
+            <span>Segla utan att krascha!</span>
+          </button>
+        </div>
+      </div>
 
       <div className="equipment">
         <h3>🛡️ Utrustning</h3>
