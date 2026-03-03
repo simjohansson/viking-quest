@@ -4,9 +4,10 @@
 export interface Item {
   id: string;
   name: string;
-  type: 'weapon' | 'armor' | 'food' | 'treasure';
+  type: 'weapon' | 'armor' | 'food' | 'treasure' | 'potion';
   description: string;
   bonus: number;
+  emoji: string;
 }
 
 export interface MemoryPair {
@@ -50,6 +51,10 @@ export interface Player {
   xp: number;
   health: number;
   inventory: Item[];
+  equipment: {
+    weapon: Item | null;
+    armor: Item | null;
+  };
   currentLocation: string;
   completedQuests: string[];
 }
@@ -58,6 +63,36 @@ export const VIKING_AVATARS = [
   '🪓', '⚔️', '🛡️', '🛶', '🏔️', '🌊', '🐺', '🐻',
   '🦅', '⚡', '🪨', '🔥'
 ];
+
+// Items available in the game - MUST be defined before LOCATIONS
+const ITEMS: Item[] = [
+  // Weapons
+  { id: 'wooden-sword', name: 'Träsvärd', type: 'weapon', description: 'Bättre än inget! +5 XP/fråga', bonus: 5, emoji: '🪵' },
+  { id: 'iron-axe', name: 'Järnyxa', type: 'weapon', description: 'En riktig krigaryxa! +15 XP/fråga', bonus: 15, emoji: '🪓' },
+  { id: 'spear', name: 'Spjut', type: 'weapon', description: 'Långt och vasst! +12 XP/fråga', bonus: 12, emoji: '🔱' },
+  { id: 'sword', name: 'Vikingasvärd', type: 'weapon', description: 'Ett äkta krigarsvärd! +20 XP/fråga', bonus: 20, emoji: '⚔️' },
+  // Armor
+  { id: 'leather-armor', name: 'Läderrustning', type: 'armor', description: 'Basklass! +10 XP/fråga', bonus: 10, emoji: '🥋' },
+  { id: 'chainmail', name: 'Ringbrynja', type: 'armor', description: 'Metallskydd för proffs! +25 XP/fråga', bonus: 25, emoji: '🛡️' },
+  // Food
+  { id: 'meat', name: 'Kött', type: 'food', description: 'Ger extra kraft! +10 XP', bonus: 10, emoji: '🍖' },
+  { id: 'fish', name: 'Fisk', type: 'food', description: 'Näring från havet! +5 XP', bonus: 5, emoji: '🐟' },
+  { id: 'bread', name: 'Knäbröd', type: 'food', description: 'Mättar magen! +8 XP', bonus: 8, emoji: '🍞' },
+  { id: 'honey', name: 'Honung', type: 'food', description: 'Söt bonus! +15 XP', bonus: 15, emoji: '🍯' },
+  // Potions (special items)
+  { id: 'wisdom-potion', name: 'Vishetsdryck', type: 'potion', description: 'Ger +50 XP på nästa fråga!', bonus: 50, emoji: '🧪' },
+  { id: 'luck-charm', name: 'Turamulett', type: 'potion', description: 'Ger +30 XP', bonus: 30, emoji: '🍀' },
+  { id: 'berserker-potion', name: 'Berserkdryck', type: 'potion', description: 'Ger +100 XP!', bonus: 100, emoji: '😤' },
+  // Treasures
+  { id: 'silver-coin', name: 'Silvermynt', type: 'treasure', description: 'Värdefullt! +20 XP', bonus: 20, emoji: '🪙' },
+  { id: 'golden-ring', name: 'Guldring', type: 'treasure', description: 'Riktig rikedom! +50 XP', bonus: 50, emoji: '💍' },
+  { id: 'amber', name: 'Bärnsten', type: 'treasure', description: 'Gul ädelsten! +30 XP', bonus: 30, emoji: '🟡' },
+  { id: 'fur', name: 'Päls', type: 'treasure', description: 'Varm och dyrbar! +25 XP', bonus: 25, emoji: '🧣' },
+  { id: 'dragon-egg', name: 'Drakägg', type: 'treasure', description: 'MYCKET värdefullt! +200 XP', bonus: 200, emoji: '🥚' }
+];
+
+// Export items for use in App.tsx
+export { ITEMS };
 
 // All game locations
 export const LOCATIONS: Location[] = [
@@ -73,6 +108,7 @@ export const LOCATIONS: Location[] = [
         name: 'Välkommen till byn',
         description: 'Lär känna ditt nya hem',
         xpReward: 50,
+        itemReward: ITEMS[9], // honey
         questions: [
           {
             id: 'v1-q1',
@@ -105,6 +141,7 @@ export const LOCATIONS: Location[] = [
         name: 'Kvinnans plats',
         description: 'Lär dig om kvinnans roll i vikingasamhället',
         xpReward: 75,
+        itemReward: ITEMS[8], // bread
         questions: [
           {
             id: 'v2-q1',
@@ -216,6 +253,7 @@ export const LOCATIONS: Location[] = [
         name: 'Skeppens mästare',
         description: 'Lär dig om vikingaskeppen',
         xpReward: 100,
+        itemReward: ITEMS[1], // iron-axe
         questions: [
           {
             id: 'p1-q1',
@@ -375,6 +413,7 @@ export const LOCATIONS: Location[] = [
         name: 'Kristendomens intåg',
         description: 'När en ny tro kom till Norden',
         xpReward: 150,
+        itemReward: ITEMS[5], // chainmail
         questions: [
           {
             id: 'b1-q1',
@@ -455,6 +494,7 @@ export const LOCATIONS: Location[] = [
         name: 'Vikingarnas arv',
         description: 'Vad lämnade vikingarna efter sig?',
         xpReward: 200,
+        itemReward: ITEMS[10], // luck-charm
         questions: [
           {
             id: 'va1-q1',
@@ -487,6 +527,7 @@ export const LOCATIONS: Location[] = [
         name: 'Tidslinje',
         description: 'Sammanfattning av vikingatiden',
         xpReward: 250,
+        itemReward: ITEMS[17], // dragon-egg
         questions: [
           {
             id: 'va2-q1',
@@ -516,21 +557,6 @@ export const LOCATIONS: Location[] = [
       }
     ]
   }
-];
-
-// Items available in the game
-export const ITEMS: Item[] = [
-  { id: 'wooden-sword', name: 'Träsvärd', type: 'weapon', description: 'Ett enkelt svärd för nybörjare', bonus: 5 },
-  { id: 'iron-axe', name: 'Järnyxa', type: 'weapon', description: 'En stark yxa av järn', bonus: 15 },
-  { id: 'spear', name: 'Spjut', type: 'weapon', description: 'Långt vapen för distans', bonus: 12 },
-  { id: 'leather-armor', name: 'Läderrustning', type: 'armor', description: 'Skydd av djurskinn', bonus: 10 },
-  { id: 'chainmail', name: 'Ringbrynja', type: 'armor', description: 'Metallskydd för krigare', bonus: 25 },
-  { id: 'meat', name: 'Kött', type: 'food', description: 'Ger kraft och energi', bonus: 10 },
-  { id: 'fish', name: 'Fisk', type: 'food', description: 'Näring från havet', bonus: 5 },
-  { id: 'silver-coin', name: 'Silvermynt', type: 'treasure', description: 'Värdefull valuta', bonus: 20 },
-  { id: 'golden-ring', name: 'Guldring', type: 'treasure', description: 'Tecken på rikedom', bonus: 50 },
-  { id: 'amber', name: 'Bärnsten', type: 'treasure', description: 'Gul ädelsten från Östersjön', bonus: 30 },
-  { id: 'fur', name: 'Päls', type: 'treasure', description: 'Varm päls från norr', bonus: 25 }
 ];
 
 export const STORAGE_KEY = 'viking-quest-save';
@@ -565,8 +591,12 @@ export function createNewPlayer(name: string, avatar: string): Player {
     health: 100,
     inventory: [
       ITEMS[0], // wooden sword
-      ITEMS[5]  // meat
+      ITEMS[6]  // meat
     ],
+    equipment: {
+      weapon: ITEMS[0], // Start with wooden sword equipped
+      armor: null
+    },
     currentLocation: 'village',
     completedQuests: []
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createNewPlayer, loadGame, saveGame, LOCATIONS, VIKING_AVATARS, calculateLevel, xpToNextLevel } from './data/gameData';
-import type { Player, Location, Quest, Question, MemoryPair } from './data/gameData';
+import type { Player, Location, Quest, Question, MemoryPair, Item } from './data/gameData';
 import './App.css';
 
 const XP_PER_QUESTION = 20;
@@ -31,6 +31,10 @@ function App() {
   const [memoryFlipped, setMemoryFlipped] = useState<number[]>([]);
   const [memoryMatches, setMemoryMatches] = useState<string[]>([]);
   const [memoryMoves, setMemoryMoves] = useState(0);
+
+  // Inventory & Equipment state
+  const [showInventory, setShowInventory] = useState(false);
+  const [activeItemBonus, setActiveItemBonus] = useState(0);
 
   // Character creation state
   const [charName, setCharName] = useState('');
@@ -73,6 +77,60 @@ function App() {
     setPlayer(newPlayer);
     saveGame(newPlayer);
     setGameState('playing');
+  };
+
+  const equipItem = (item: Item) => {
+    if (!player) return;
+    
+    const updatedPlayer = { ...player };
+    
+    if (item.type === 'weapon') {
+      // Swap weapon
+      if (updatedPlayer.equipment.weapon) {
+        updatedPlayer.inventory.push(updatedPlayer.equipment.weapon);
+      }
+      updatedPlayer.equipment.weapon = item;
+      updatedPlayer.inventory = updatedPlayer.inventory.filter(i => i.id !== item.id);
+    } else if (item.type === 'armor') {
+      // Swap armor
+      if (updatedPlayer.equipment.armor) {
+        updatedPlayer.inventory.push(updatedPlayer.equipment.armor);
+      }
+      updatedPlayer.equipment.armor = item;
+      updatedPlayer.inventory = updatedPlayer.inventory.filter(i => i.id !== item.id);
+    }
+    
+    setPlayer(updatedPlayer);
+    saveGame(updatedPlayer);
+  };
+
+  const useItem = (item: Item) => {
+    if (!player || !currentQuestion) return;
+    
+    // Can only use food/potion during a question
+    if (item.type !== 'food' && item.type !== 'potion') return;
+    
+    // Apply bonus
+    const bonusXp = item.bonus;
+    setActiveItemBonus(bonusXp);
+    
+    // Remove item from inventory
+    const updatedPlayer = {
+      ...player,
+      inventory: player.inventory.filter(i => i.id !== item.id)
+    };
+    setPlayer(updatedPlayer);
+    saveGame(updatedPlayer);
+    
+    // Clear bonus after question is answered
+    setTimeout(() => setActiveItemBonus(0), 2000);
+  };
+
+  const getEquipmentBonus = (): number => {
+    if (!player) return 0;
+    const weaponBonus = player.equipment.weapon?.bonus ?? 0;
+    const armorBonus = player.equipment.armor?.bonus ?? 0;
+    return weaponBonus + armorBonus;
   };
 
   const selectLocation = (location: Location) => {
@@ -183,8 +241,10 @@ function App() {
     setFeedback(isCorrect ? 'correct' : 'wrong');
 
     if (isCorrect) {
-      // Add XP for correct answer
-      const totalXp = player.xp + XP_PER_QUESTION;
+      // Add XP for correct answer (base + equipment + active item)
+      const equipmentBonus = getEquipmentBonus();
+      const totalXpGain = XP_PER_QUESTION + equipmentBonus + activeItemBonus;
+      const totalXp = player.xp + totalXpGain;
       const newLevel = calculateLevel(totalXp);
       
       const updatedPlayer: Player = {
@@ -194,6 +254,9 @@ function App() {
       };
       setPlayer(updatedPlayer);
       saveGame(updatedPlayer);
+
+      // Clear active item bonus after getting XP
+      setActiveItemBonus(0);
 
       // Show fact
       if (currentQuestion.facts.length > 0) {
@@ -330,6 +393,7 @@ function App() {
 
   // Quest question screen
   if (currentQuestion && selectedQuest) {
+    const totalBonus = getEquipmentBonus() + activeItemBonus;
     return (
       <div className="game-container">
         <div className="quest-screen">
@@ -342,12 +406,20 @@ function App() {
               setMemoryCards([]);
               setMemoryFlipped([]);
               setMemoryMatches([]);
+              setActiveItemBonus(0);
             }}>
               ← Tillbaka
             </button>
             <h2>{selectedQuest.name}</h2>
             <div className="progress">Fråga {questionIndex + 1}/{selectedQuest.questions.length}</div>
           </div>
+
+          {totalBonus > 0 && (
+            <div className="bonus-display">
+              ⚔️ +{totalBonus} XP bonus!
+              {activeItemBonus > 0 && <span className="item-bonus-text"> (inkl. föremål)</span>}
+            </div>
+          )}
 
           <div className="question-box">
             <p className="question">{currentQuestion.question}</p>
@@ -499,18 +571,58 @@ function App() {
         </div>
       )}
 
-      <div className="inventory">
-        <h3>Ryggsäck ({player?.inventory.length})</h3>
-        <div className="inventory-grid">
-          {player?.inventory.map((item, index) => (
-            <span key={index} className={`item ${item.type}`} title={item.description}>
-              {item.type === 'weapon' && '⚔️'}
-              {item.type === 'armor' && '🛡️'}
-              {item.type === 'food' && '🍖'}
-              {item.type === 'treasure' && '💎'}
+      <div className="equipment">
+        <h3>🛡️ Utrustning</h3>
+        <div className="equipment-slots">
+          <div className="equip-slot weapon">
+            <span className="slot-label">Vapen</span>
+            <span className="slot-item">
+              {player?.equipment.weapon ? player.equipment.weapon.emoji : '❌'}
             </span>
-          ))}
+            <span className="slot-bonus">
+              +{player?.equipment.weapon?.bonus ?? 0} XP
+            </span>
+          </div>
+          <div className="equip-slot armor">
+            <span className="slot-label">Rustning</span>
+            <span className="slot-item">
+              {player?.equipment.armor ? player.equipment.armor.emoji : '❌'}
+            </span>
+            <span className="slot-bonus">
+              +{player?.equipment.armor?.bonus ?? 0} XP
+            </span>
+          </div>
         </div>
+        <p className="total-bonus">Total bonus: +{getEquipmentBonus()} XP/fråga</p>
+      </div>
+
+      <div className="inventory">
+        <button className="inventory-toggle" onClick={() => setShowInventory(!showInventory)}>
+          🎒 Ryggsäck ({player?.inventory.length}) {showInventory ? '▼' : '▶'}
+        </button>
+        {showInventory && (
+          <div className="inventory-content">
+            <div className="inventory-grid">
+              {player?.inventory.map((item, index) => (
+                <button
+                  key={index}
+                  className={`inventory-item ${item.type}`}
+                  onClick={() => (item.type === 'weapon' || item.type === 'armor') ? equipItem(item) : useItem(item)}
+                  title={`${item.name}: ${item.description}`}
+                >
+                  <span className="item-emoji">{item.emoji || (item.type === 'weapon' ? '⚔️' : item.type === 'armor' ? '🛡️' : item.type === 'food' ? '🍖' : '💎')}</span>
+                  <span className="item-name">{item.name}</span>
+                  <span className="item-bonus">+{item.bonus} XP</span>
+                  {item.type === 'food' || item.type === 'potion' ? (
+                    <span className="item-action">Klicka för att använda!</span>
+                  ) : (
+                    <span className="item-action">Klicka för att utrusta</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
