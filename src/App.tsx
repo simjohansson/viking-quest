@@ -207,6 +207,7 @@ function App() {
     setBoatDistance(0);
     setBoatGameOver(false);
     setBoatTarget({ x: 90, y: 30 + Math.random() * 40, name: destinationName });
+    setGameState('boat');
     
     // Generate obstacles
     const obstacles: {x: number, y: number, type: string}[] = [];
