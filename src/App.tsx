@@ -436,7 +436,14 @@ function App() {
         <h3>Välj plats</h3>
         <div className="location-grid">
           {LOCATIONS.map(location => {
-            const isUnlocked = location.id === 'village' || player?.completedQuests.some(q => q.includes(location.id.split('-')[0]));
+            // Location unlock logic: village is always unlocked, others unlock after completing previous location's quests
+            const locationOrder = ['village', 'port', 'temple', 'battlefield', 'valhalla'];
+            const currentLocationIndex = locationOrder.indexOf(location.id);
+            const completedCount = player?.completedQuests?.length ?? 0;
+            const isUnlocked = location.id === 'village' || (
+              currentLocationIndex > 0 && 
+              completedCount >= currentLocationIndex
+            );
             return (
               <button
                 key={location.id}
