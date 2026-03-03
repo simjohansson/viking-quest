@@ -24,6 +24,7 @@ function App() {
   const [showFact, setShowFact] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [newItem, setNewItem] = useState<string | null>(null);
+  const [waitingForNext, setWaitingForNext] = useState(false);
   
   // Memory game state
   const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
@@ -199,57 +200,63 @@ function App() {
         setShowFact(currentQuestion.facts[0]);
       }
 
-      // Next question or quest complete
-      setTimeout(() => {
-        setFeedback(null);
-        setShowFact(null);
-        
-        if (questionIndex < selectedQuest.questions.length - 1) {
-          setQuestionIndex(questionIndex + 1);
-          const nextQuestion = selectedQuest.questions[questionIndex + 1];
-          setCurrentQuestion(nextQuestion);
-          
-          // Initialize memory game if next question is memory
-          if (nextQuestion.type === 'memory' && nextQuestion.memoryPairs) {
-            initMemoryGame(nextQuestion.memoryPairs);
-          }
-        } else {
-          // Quest complete! Add quest XP reward
-          const finalXp = totalXp + selectedQuest.xpReward;
-          const finalLevel = calculateLevel(finalXp);
-          
-          let newInventory = [...player.inventory];
-          let itemMsg: string | null = null;
-          
-          if (selectedQuest.itemReward) {
-            newInventory.push(selectedQuest.itemReward);
-            itemMsg = selectedQuest.itemReward.name;
-          }
-
-          const completedPlayer: Player = {
-            ...updatedPlayer,
-            xp: finalXp,
-            level: finalLevel,
-            inventory: newInventory,
-            completedQuests: [...player.completedQuests, selectedQuest.id]
-          };
-          
-          setPlayer(completedPlayer);
-          saveGame(completedPlayer);
-          setNewItem(itemMsg);
-          
-          setTimeout(() => {
-            setNewItem(null);
-            setSelectedQuest(null);
-            setCurrentQuestion(null);
-          }, 2000);
-        }
-      }, 1500);
+      // Wait for user to click "Next" instead of auto-advancing
+      setWaitingForNext(true);
     } else {
       // Wrong answer - try again
       setTimeout(() => {
         setFeedback(null);
       }, 1000);
+    }
+  };
+
+  const handleNextQuestion = () => {
+    if (!currentQuestion || !player || !selectedQuest || !waitingForNext) return;
+
+    setWaitingForNext(false);
+    setFeedback(null);
+    setShowFact(null);
+    
+    if (questionIndex < selectedQuest.questions.length - 1) {
+      setQuestionIndex(questionIndex + 1);
+      const nextQuestion = selectedQuest.questions[questionIndex + 1];
+      setCurrentQuestion(nextQuestion);
+      
+      // Initialize memory game if next question is memory
+      if (nextQuestion.type === 'memory' && nextQuestion.memoryPairs) {
+        initMemoryGame(nextQuestion.memoryPairs);
+      }
+    } else {
+      // Quest complete! Add quest XP reward
+      const totalXp = player.xp + XP_PER_QUESTION;
+      const finalXp = totalXp + selectedQuest.xpReward;
+      const finalLevel = calculateLevel(finalXp);
+      
+      let newInventory = [...player.inventory];
+      let itemMsg: string | null = null;
+      
+      if (selectedQuest.itemReward) {
+        newInventory.push(selectedQuest.itemReward);
+        itemMsg = selectedQuest.itemReward.name;
+      }
+
+      const completedPlayer: Player = {
+        ...player,
+        xp: finalXp,
+        level: finalLevel,
+        inventory: newInventory,
+        completedQuests: [...player.completedQuests, selectedQuest.id]
+      };
+      
+      setPlayer(completedPlayer);
+      saveGame(completedPlayer);
+      setNewItem(itemMsg);
+      
+      setTimeout(() => {
+        setNewItem(null);
+        setSelectedQuest(null);
+        setCurrentQuestion(null);
+      }, 2000);
     }
   };
 
@@ -404,6 +411,12 @@ function App() {
                 <h4>📚 Visste du?</h4>
                 <p>{showFact}</p>
               </div>
+            )}
+
+            {waitingForNext && (
+              <button className="next-btn" onClick={handleNextQuestion}>
+                {questionIndex < (selectedQuest?.questions.length ?? 0) - 1 ? 'Nästa fråga →' : 'Slutför uppdrag →'}
+              </button>
             )}
           </div>
 

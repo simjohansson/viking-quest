@@ -467,6 +467,31 @@ body {
   line-height: 1.5;
 }
 
+.next-btn {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 16px 24px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  touch-action: manipulation;
+}
+
+.next-btn:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
+}
+
+.next-btn:active {
+  transform: scale(0.98);
+}
+
 .timing-game {
   padding: 30px 20px;
 }
