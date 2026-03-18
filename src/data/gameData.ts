@@ -339,7 +339,7 @@ export const LOCATIONS: Location[] = [
             id: 't1-q1',
             type: 'multiple-choice',
             question: 'Vilka tre gudar tillbad vikingarna främst?',
-            options: ['Zeus, Hera, Poseidon', 'Oden, Tor, Freja', 'Mars, Jupiter, Venus', 'Freyr, Frö, Balder'],
+            options: ['Oden, Tor, Freja', 'Loke, Tor, Heimdall', 'Freyr, Njord, Baldur', 'Thor, Odin, Freya'],
             correctAnswer: 1,
             facts: ['Man trodde på gudar som Oden, Tor och Freja, och offrade till dem för att få god skörd eller framgång i strid.']
           },
@@ -362,8 +362,8 @@ export const LOCATIONS: Location[] = [
               { id: 'thor', emoji: '⚡', name: 'Tor' },
               { id: 'freya', emoji: '🌹', name: 'Freja' },
               { id: 'loki', emoji: '😈', name: 'Loki' },
-              { id: 'tyr', emoji: '✋', name: 'Tyr' },
-              { id: 'freyr', emoji: '🌾', name: 'Freyr' }
+              { id: 'tyr', emoji: '⚔️', name: 'Tyr' },
+              { id: 'freyr', emoji: '🦌', name: 'Freyr' }
             ]
           }
         ]
