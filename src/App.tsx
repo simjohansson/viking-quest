@@ -40,8 +40,15 @@ function App() {
   const [farmPlots, setFarmPlots] = useState<{plant: string | null, growth: number, watered: boolean}[]>(
     Array(6).fill(null).map(() => ({ plant: null, growth: 0, watered: false }))
   );
-  const [farmCoins, setFarmCoins] = useState(0);
+  const [farmCoins, setFarmCoins] = useState(50); // Start with 50 coins
   const [selectedSeed, setSelectedSeed] = useState<string | null>(null);
+
+  const farmSeeds: Record<string, { id: string, name: string, emoji: string, cost: number, profit: number }> = {
+    wheat: { id: 'wheat', name: 'Vete', emoji: '🌾', cost: 10, profit: 25 },
+    carrot: { id: 'carrot', name: 'Morot', emoji: '🥕', cost: 8, profit: 18 },
+    cabbage: { id: 'cabbage', name: 'Kål', emoji: '🥬', cost: 6, profit: 15 },
+    corn: { id: 'corn', name: 'Majs', emoji: '🌽', cost: 15, profit: 35 },
+  };
 
   // Boat game state
   const [boatPosition, setBoatPosition] = useState({ x: 50, y: 50 });
@@ -156,10 +163,18 @@ function App() {
   };
 
   // Farm game functions
-  const plantSeed = (plotIndex: number, seedType: string) => {
+  const buySeed = (seedType: string) => {
+    const seedData = farmSeeds[seedType];
+    if (!seedData || farmCoins < seedData.cost) return; // Not enough coins
+    
+    setFarmCoins(farmCoins - seedData.cost);
+    setSelectedSeed(seedType);
+  };
+
+  const plantSeed = (plotIndex: number) => {
     if (!selectedSeed || farmPlots[plotIndex].plant) return;
     const newPlots = [...farmPlots];
-    newPlots[plotIndex] = { plant: seedType, growth: 0, watered: false };
+    newPlots[plotIndex] = { plant: selectedSeed, growth: 0, watered: false };
     setFarmPlots(newPlots);
     setSelectedSeed(null);
   };
@@ -174,7 +189,7 @@ function App() {
   const growPlants = () => {
     const newPlots = farmPlots.map(plot => {
       if (plot.plant && plot.watered && plot.growth < 100) {
-        return { ...plot, growth: Math.min(100, plot.growth + 25) };
+        return { ...plot, growth: Math.min(100, plot.growth + 33) };
       }
       return plot;
     });
@@ -185,14 +200,7 @@ function App() {
     const plot = farmPlots[plotIndex];
     if (!plot.plant || plot.growth < 100) return;
 
-    // Calculate reward based on plant type
-    const rewards: Record<string, number> = {
-      'wheat': 30,
-      'carrot': 25,
-      'cabbage': 20,
-      'corn': 40
-    };
-    const reward = rewards[plot.plant] || 20;
+    const reward = farmSeeds[plot.plant]?.profit || 20;
     setFarmCoins(farmCoins + reward);
 
     // Clear plot
@@ -654,13 +662,6 @@ function App() {
 
   // Farm mini-game
   if (gameState === 'farm') {
-    const seeds = [
-      { id: 'wheat', name: 'Vete', emoji: '🌾', cost: 10 },
-      { id: 'carrot', name: 'Morot', emoji: '🥕', cost: 8 },
-      { id: 'cabbage', name: 'Kål', emoji: '🥬', cost: 6 },
-      { id: 'corn', name: 'Majs', emoji: '🌽', cost: 15 },
-    ];
-
     return (
       <div className="game-container">
         <div className="farm-game">
@@ -671,15 +672,19 @@ function App() {
           </div>
 
           <div className="seed-shop">
-            <h4>Fröbutik (klicka för att välja)</h4>
+            <h4>🛒 Fröbutik</h4>
+            <p className="shop-hint">{selectedSeed ? `Du valde: ${farmSeeds[selectedSeed]?.emoji} ${farmSeeds[selectedSeed]?.name}` : 'Klicka på ett frö för att köpa'}</p>
             <div className="seed-options">
-              {seeds.map(seed => (
+              {Object.values(farmSeeds).map(seed => (
                 <button
                   key={seed.id}
-                  className={`seed-btn ${selectedSeed === seed.id ? 'selected' : ''}`}
-                  onClick={() => setSelectedSeed(seed.id)}
+                  className={`seed-btn ${selectedSeed === seed.id ? 'selected' : ''} ${farmCoins < seed.cost ? 'disabled' : ''}`}
+                  onClick={() => buySeed(seed.id)}
+                  disabled={farmCoins < seed.cost}
                 >
-                  {seed.emoji} {seed.name} ({seed.cost}🪙)
+                  {seed.emoji} {seed.name}
+                  <span className="seed-cost">💰 {seed.cost}</span>
+                  <span className="seed-profit">→ +{seed.profit}</span>
                 </button>
               ))}
             </div>
@@ -692,7 +697,7 @@ function App() {
                 className={`farm-plot ${farmPlots[index].plant ? 'planted' : ''} ${farmPlots[index].watered ? 'watered' : ''}`}
                 onClick={() => {
                   if (!farmPlots[index].plant && selectedSeed) {
-                    plantSeed(index, selectedSeed);
+                    plantSeed(index);
                   } else if (farmPlots[index].plant && !farmPlots[index].watered) {
                     waterPlant(index);
                   } else if (farmPlots[index].growth >= 100) {
@@ -713,19 +718,19 @@ function App() {
                     </div>
                     <span className="plot-status">
                       {!farmPlots[index].watered ? '💧 Klicka för att vattna!' : 
-                       farmPlots[index].growth >= 100 ? '✨ Klicka för att skörda!' : 
+                       farmPlots[index].growth >= 100 ? `✨ Skörda! +${farmSeeds[farmPlots[index].plant ?? '']?.profit ?? 20}🪙` : 
                        '🌱 Växer...'}
                     </span>
                   </>
                 ) : (
-                  <span className="empty-plot">🕳️ Klicka för att plantera</span>
+                  <span className="empty-plot">🕳️ {selectedSeed ? 'Plantera!' : 'Köp frö först'}</span>
                 )}
               </div>
             ))}
           </div>
 
           <button className="grow-btn" onClick={growPlants}>
-            🌱 Vattna alla & växa (+25% per klick)
+            🌱 Vattna alla & växa (+33% per klick)
           </button>
         </div>
       </div>
